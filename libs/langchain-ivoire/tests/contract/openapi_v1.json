@@ -1,0 +1,1864 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "Abyshire Baoulé API",
+  "version": "2.0.0",
+  "description": "Baoulé (bci) translation, speech recognition, speech synthesis and search embeddings.\n\nTwo surfaces share one deployment and one key:\n* **Native routes** (compatible with API 1.1.0, used by langchain-ivoire's remote backend and the apps):\n  `/v1/translate`, `/listen_bci`, `/tts_bci`, `/speak_bci`, `/v1/languages`, `/v1/models`, `/health`.\n  Every native route is also served under `/v1` (e.g. `/v1/listen_bci`), and `/v1/listen` / `/v1/speak` are\n  aliases of `/listen_bci` / `/tts_bci`.\n* **OpenAI-compatible routes**: `/v1/chat/completions` (translation), `/v1/audio/transcriptions`,\n  `/v1/audio/speech`, `/v1/embeddings`, `/v1/models`.\n\n**Authentication:** `Authorization: Bearer <key>`. Each key carries scopes: `translate`, `listen`, `speak`,\n`embed`. A route outside the key's scopes answers 403 `forbidden`. Only `/health` is open (no key, cheap); every other route, `/ready` included, needs a valid key.\n\n**Models** (product ids): `abyshire/translate-baoule`, `abyshire/listen-baoule`, `abyshire/speak-baoule`,\n`abyshire/embed-baoule`.\n\n**Translation convention (chat completions):** the text is the last `user` message. Direction and style come\nfrom the top-level `translation` object first, else from a `system` message\n`ivoire-translate source=<code> target=<code> style=<style>`, else from language names in the system message,\nelse French -> Baoulé, everyday. Codes `bci`, `fra`, `eng`; styles `everyday`, `tale`, `formal`. The reply content is the translation only.\nEnglish <-> Baoulé goes through French; the French is returned in `translation.pivot` / `pivot.fra`.\n\n**Usage on every response:** tokens (translation, embeddings), seconds of audio (transcription), characters\n(speech; in the `X-Usage-Characters` header because the body is audio). Streaming chat responses end with a\nusage chunk.\n\n**Errors:** native routes answer RFC 9457 `application/problem+json` `{type, title, status, detail, code}`.\nOpenAI-compatible routes answer `{\"error\": {\"message\", \"type\", \"code\", \"param\"}}` and also carry the problem\nfields at the top level. Stable codes: invalid_request, unsupported_language, unauthorized, forbidden,\nnot_found, method_not_allowed, idempotency_conflict, too_large, rate_limited, internal,\nupstream_unavailable, model_not_found.\n\n**Capacity:** when the processing queue is full the API answers 429 `rate_limited` at once, with\n`Retry-After` (seconds). 503 `upstream_unavailable` (with `Retry-After`) while models load or a service is\noff.\n\n**Data:** zero retention. Request bodies are processed in memory and never stored; only metering data\n(key label, route, counts, durations, status) is logged. Generated audio for `audio_url` is kept in memory\nfor at most 5 minutes.\n\nEvery response carries `X-Request-Id` (send one to have it echoed). POST requests accept `Idempotency-Key`\n(native routes; responses cached in memory for 10 minutes per caller, route and key).\n"
+ },
+ "servers": [
+  {
+   "url": "https://api.abyshire.ci",
+   "description": "Abyshire API"
+  }
+ ],
+ "security": [
+  {
+   "bearer": []
+  }
+ ],
+ "tags": [
+  {
+   "name": "native",
+   "description": "Native API (compatible with 1.1.0)"
+  },
+  {
+   "name": "openai",
+   "description": "OpenAI-compatible API"
+  },
+  {
+   "name": "ops",
+   "description": "Health (no key) and readiness (any valid key)"
+  }
+ ],
+ "paths": {
+  "/v1/translate": {
+   "post": {
+    "tags": [
+     "native"
+    ],
+    "operationId": "translate",
+    "summary": "Translate texts (bci/fra/eng). Also served at /translate, /translations, /v1/translations.",
+    "description": "Scope `translate`. bci<->fra in one step; eng<->bci goes through French (returned in `pivot.fra`).\nStyles: everyday (default), tale, formal.\n",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/RequestId"
+     },
+     {
+      "$ref": "#/components/parameters/IdempotencyKey"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TranslateRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/RequestId"
+       }
+      },
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TranslateResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "401": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "403": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "409": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "413": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "429": {
+      "$ref": "#/components/responses/Problem429"
+     },
+     "503": {
+      "$ref": "#/components/responses/Problem503"
+     }
+    }
+   }
+  },
+  "/listen_bci": {
+   "post": {
+    "tags": [
+     "native"
+    ],
+    "operationId": "listen_bci",
+    "summary": "Baoulé speech -> Baoulé text (+ French/English). Aliases /v1/listen_bci, /v1/listen.",
+    "description": "Scope `listen`. The French and English translations are filled only when the key also has `translate`\n(and `translate` is not 0); otherwise they are empty strings. Any audio container ffmpeg can decode;\nat most 120 s and 20 MB.\n",
+    "parameters": [
+     {
+      "name": "translate",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "enum": [
+        0,
+        1
+       ],
+       "default": 1
+      }
+     },
+     {
+      "$ref": "#/components/parameters/RequestId"
+     },
+     {
+      "$ref": "#/components/parameters/IdempotencyKey"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "audio"
+        ],
+        "properties": {
+         "audio": {
+          "type": "string",
+          "contentMediaType": "application/octet-stream"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK (more fields may be added)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ListenResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "401": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "403": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "413": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "429": {
+      "$ref": "#/components/responses/Problem429"
+     },
+     "503": {
+      "$ref": "#/components/responses/Problem503"
+     }
+    }
+   }
+  },
+  "/tts_bci": {
+   "post": {
+    "tags": [
+     "native"
+    ],
+    "operationId": "tts_bci",
+    "summary": "Speak a Baoulé text. Aliases /v1/tts_bci, /v1/speak.",
+    "description": "Scope `speak` (approval only). Returns a relative `audio_url` (fetch BASE + audio_url within 5 minutes,\nsame key), or the WAV inline as base64 with `?b64=1`.\n",
+    "parameters": [
+     {
+      "name": "b64",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "enum": [
+        0,
+        1
+       ],
+       "default": 0
+      }
+     },
+     {
+      "$ref": "#/components/parameters/RequestId"
+     },
+     {
+      "$ref": "#/components/parameters/IdempotencyKey"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "bci"
+        ],
+        "properties": {
+         "bci": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TtsResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "401": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "403": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "429": {
+      "$ref": "#/components/responses/Problem429"
+     },
+     "503": {
+      "$ref": "#/components/responses/Problem503"
+     }
+    }
+   }
+  },
+  "/speak_bci": {
+   "post": {
+    "tags": [
+     "native"
+    ],
+    "operationId": "speak_bci",
+    "summary": "English (or French) text -> Baoulé text + speech. Alias /v1/speak_bci.",
+    "description": "Scopes `translate` and `speak`. `{\"text\": English}` or `{\"fra\": French}`.",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/RequestId"
+     },
+     {
+      "$ref": "#/components/parameters/IdempotencyKey"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "text": {
+          "type": "string",
+          "maxLength": 1000
+         },
+         "fra": {
+          "type": "string",
+          "maxLength": 1000
+         },
+         "style": {
+          "$ref": "#/components/schemas/Style"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SpeakResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "401": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "403": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "429": {
+      "$ref": "#/components/responses/Problem429"
+     },
+     "503": {
+      "$ref": "#/components/responses/Problem503"
+     }
+    }
+   }
+  },
+  "/audio/{aid}.wav": {
+   "get": {
+    "tags": [
+     "native"
+    ],
+    "operationId": "get_audio",
+    "summary": "Audio made by /tts_bci or /speak_bci (5 minutes, same key). Alias /v1/audio/{aid}.wav.",
+    "parameters": [
+     {
+      "name": "aid",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "pattern": "^[A-Za-z0-9_-]{8,64}$"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "WAV audio",
+      "content": {
+       "audio/wav": {
+        "schema": {
+         "type": "string",
+         "contentMediaType": "audio/wav"
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Problem"
+     },
+     "404": {
+      "$ref": "#/components/responses/Problem"
+     }
+    }
+   }
+  },
+  "/v1/languages": {
+   "get": {
+    "tags": [
+     "native"
+    ],
+    "operationId": "languages",
+    "summary": "Supported languages. Also /languages.",
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LanguagesResponse"
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Problem"
+     }
+    }
+   }
+  },
+  "/v1/models": {
+   "get": {
+    "tags": [
+     "native",
+     "openai"
+    ],
+    "operationId": "models",
+    "summary": "Product models (OpenAI / OpenRouter list format plus the native fields). Also /models.",
+    "description": "`data` is the OpenAI/OpenRouter model list: id, modalities, limits, prices, access (`public` or `approval`) and datacenter locations. The native fields (`api_version`,\n`mt`, `asr`, `tts`, `embed`) keep API 1.1.0 clients working. Product names and dates only.\n",
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ModelsResponse"
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Problem"
+     }
+    }
+   }
+  },
+  "/v1/chat/completions": {
+   "post": {
+    "tags": [
+     "openai"
+    ],
+    "operationId": "chat_completions",
+    "summary": "Translation as a chat completion (abyshire/translate-baoule). Scope `translate`.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ChatRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "A completion, or a text/event-stream when `stream` is true (chunks, then a usage chunk with empty `choices`, then `data: [DONE]`).",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ChatCompletion"
+        }
+       },
+       "text/event-stream": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "401": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "403": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "404": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "413": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "429": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "503": {
+      "$ref": "#/components/responses/OpenAIError"
+     }
+    }
+   }
+  },
+  "/v1/audio/transcriptions": {
+   "post": {
+    "tags": [
+     "openai"
+    ],
+    "operationId": "audio_transcriptions",
+    "summary": "Baoulé speech recognition (abyshire/listen-baoule). Scope `listen`.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "file"
+        ],
+        "properties": {
+         "file": {
+          "type": "string",
+          "contentMediaType": "application/octet-stream"
+         },
+         "model": {
+          "type": "string",
+          "default": "abyshire/listen-baoule"
+         },
+         "language": {
+          "type": "string",
+          "description": "bci (ISO 639-3); \"bau\" is accepted as the same language"
+         },
+         "response_format": {
+          "type": "string",
+          "enum": [
+           "json",
+           "text",
+           "verbose_json"
+          ],
+          "default": "json"
+         },
+         "prompt": {
+          "type": "string",
+          "description": "ignored"
+         },
+         "temperature": {
+          "type": "number",
+          "description": "ignored"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Transcription"
+        }
+       },
+       "text/plain": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "401": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "403": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "413": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "429": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "503": {
+      "$ref": "#/components/responses/OpenAIError"
+     }
+    }
+   }
+  },
+  "/v1/audio/speech": {
+   "post": {
+    "tags": [
+     "openai"
+    ],
+    "operationId": "audio_speech",
+    "summary": "Baoulé speech synthesis (abyshire/speak-baoule). Scope `speak` (approval only).",
+    "description": "`wav` (default) is a complete WAV file (22.05 kHz mono 16-bit). `pcm` streams raw 16-bit little-endian\nmono at 24 kHz as it is generated. `mp3`, `opus`, `flac` are encoded after synthesis. `voice` and `speed`\nare accepted; there is one voice and `speed` is ignored. Usage: header `X-Usage-Characters` (and\n`X-Usage-Audio-Seconds` when known before the body is sent).\n",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SpeechRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Audio bytes",
+      "headers": {
+       "X-Usage-Characters": {
+        "schema": {
+         "type": "integer"
+        }
+       },
+       "X-Usage-Audio-Seconds": {
+        "schema": {
+         "type": "number"
+        }
+       }
+      },
+      "content": {
+       "audio/wav": {
+        "schema": {
+         "type": "string",
+         "contentMediaType": "audio/wav"
+        }
+       },
+       "audio/pcm": {
+        "schema": {
+         "type": "string"
+        }
+       },
+       "audio/mpeg": {
+        "schema": {
+         "type": "string"
+        }
+       },
+       "audio/ogg": {
+        "schema": {
+         "type": "string"
+        }
+       },
+       "audio/flac": {
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "401": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "403": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "429": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "503": {
+      "$ref": "#/components/responses/OpenAIError"
+     }
+    }
+   }
+  },
+  "/v1/embeddings": {
+   "post": {
+    "tags": [
+     "openai"
+    ],
+    "operationId": "embeddings",
+    "summary": "Baoulé/French search embeddings (abyshire/embed-baoule, 768 dimensions). Scope `embed`.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EmbeddingsRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EmbeddingsResponse"
+        }
+       }
+      }
+     },
+     "400": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "401": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "403": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "413": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "429": {
+      "$ref": "#/components/responses/OpenAIError"
+     },
+     "503": {
+      "$ref": "#/components/responses/OpenAIError"
+     }
+    }
+   }
+  },
+  "/health": {
+   "get": {
+    "tags": [
+     "ops"
+    ],
+    "operationId": "health",
+    "summary": "Liveness (no key). Also /v1/health.",
+    "security": [],
+    "responses": {
+     "200": {
+      "description": "Process is up (models may still be loading; see /ready)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Health"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "securitySchemes": {
+   "bearer": {
+    "type": "http",
+    "scheme": "bearer"
+   }
+  },
+  "parameters": {
+   "RequestId": {
+    "name": "X-Request-Id",
+    "in": "header",
+    "required": false,
+    "schema": {
+     "type": "string",
+     "maxLength": 128,
+     "pattern": "^[A-Za-z0-9._:\\-]{1,128}$"
+    }
+   },
+   "IdempotencyKey": {
+    "name": "Idempotency-Key",
+    "in": "header",
+    "required": false,
+    "schema": {
+     "type": "string",
+     "maxLength": 200
+    }
+   }
+  },
+  "headers": {
+   "RequestId": {
+    "schema": {
+     "type": "string"
+    }
+   },
+   "RetryAfter": {
+    "schema": {
+     "type": "integer"
+    }
+   }
+  },
+  "responses": {
+   "Problem": {
+    "description": "problem+json",
+    "content": {
+     "application/problem+json": {
+      "schema": {
+       "$ref": "#/components/schemas/Problem"
+      }
+     }
+    }
+   },
+   "Problem429": {
+    "description": "rate_limited (queue full); Retry-After in seconds",
+    "headers": {
+     "Retry-After": {
+      "$ref": "#/components/headers/RetryAfter"
+     }
+    },
+    "content": {
+     "application/problem+json": {
+      "schema": {
+       "$ref": "#/components/schemas/Problem"
+      }
+     }
+    }
+   },
+   "Problem503": {
+    "description": "upstream_unavailable (loading, or the service is off); Retry-After in seconds",
+    "headers": {
+     "Retry-After": {
+      "$ref": "#/components/headers/RetryAfter"
+     }
+    },
+    "content": {
+     "application/problem+json": {
+      "schema": {
+       "$ref": "#/components/schemas/Problem"
+      }
+     }
+    }
+   },
+   "OpenAIError": {
+    "description": "OpenAI-style error (with the problem fields at the top level too)",
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/OpenAIError"
+      }
+     }
+    }
+   }
+  },
+  "schemas": {
+   "Lang": {
+    "type": "string",
+    "enum": [
+     "bci",
+     "fra",
+     "eng"
+    ]
+   },
+   "Style": {
+    "type": "string",
+    "enum": [
+     "everyday",
+     "tale",
+     "formal"
+    ],
+    "default": "everyday",
+    "description": "everyday (default), tale (storytelling register), formal."
+   },
+   "TranslateRequest": {
+    "type": "object",
+    "required": [
+     "texts",
+     "source",
+     "target"
+    ],
+    "properties": {
+     "texts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+       "type": "string",
+       "maxLength": 1000
+      },
+      "description": "1-32 segments, each at most 1000 characters"
+     },
+     "source": {
+      "$ref": "#/components/schemas/Lang"
+     },
+     "target": {
+      "$ref": "#/components/schemas/Lang"
+     },
+     "style": {
+      "$ref": "#/components/schemas/Style"
+     }
+    }
+   },
+   "TranslateModels": {
+    "type": "object",
+    "required": [
+     "mt",
+     "pivot",
+     "tier"
+    ],
+    "properties": {
+     "mt": {
+      "type": "string",
+      "description": "product id of the translator"
+     },
+     "pivot": {
+      "type": "string",
+      "description": "product id used for English<->French (the same translator)"
+     },
+     "tier": {
+      "type": "string",
+      "enum": [
+       "commercial"
+      ]
+     }
+    }
+   },
+   "TranslateUsage": {
+    "type": "object",
+    "required": [
+     "characters",
+     "segments"
+    ],
+    "properties": {
+     "characters": {
+      "type": "integer"
+     },
+     "segments": {
+      "type": "integer"
+     },
+     "prompt_tokens": {
+      "type": "integer"
+     },
+     "completion_tokens": {
+      "type": "integer"
+     },
+     "total_tokens": {
+      "type": "integer"
+     }
+    }
+   },
+   "TranslateResponse": {
+    "type": "object",
+    "required": [
+     "texts",
+     "source",
+     "target",
+     "style",
+     "model",
+     "timings_ms",
+     "usage",
+     "request_id"
+    ],
+    "properties": {
+     "texts": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "source": {
+      "$ref": "#/components/schemas/Lang"
+     },
+     "target": {
+      "$ref": "#/components/schemas/Lang"
+     },
+     "style": {
+      "$ref": "#/components/schemas/Style"
+     },
+     "pivot": {
+      "anyOf": [
+       {
+        "type": "object",
+        "additionalProperties": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        }
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "{\"fra\": [...]} when the route went through French"
+     },
+     "model": {
+      "$ref": "#/components/schemas/TranslateModels"
+     },
+     "timings_ms": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "integer"
+      }
+     },
+     "usage": {
+      "$ref": "#/components/schemas/TranslateUsage"
+     },
+     "request_id": {
+      "type": "string"
+     }
+    }
+   },
+   "Usage": {
+    "type": "object",
+    "required": [
+     "characters"
+    ],
+    "properties": {
+     "audio_seconds": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "characters": {
+      "type": "integer"
+     }
+    }
+   },
+   "ListenResponse": {
+    "type": "object",
+    "required": [
+     "bci",
+     "fra",
+     "eng",
+     "asr_confidence",
+     "low_confidence",
+     "timings_ms",
+     "route",
+     "usage"
+    ],
+    "properties": {
+     "bci": {
+      "type": "string"
+     },
+     "fra": {
+      "type": "string"
+     },
+     "eng": {
+      "type": "string"
+     },
+     "asr_confidence": {
+      "type": "number"
+     },
+     "low_confidence": {
+      "type": "boolean"
+     },
+     "audio_s": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "timings_ms": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "integer"
+      }
+     },
+     "route": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "note": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "model": {
+      "type": "string"
+     },
+     "usage": {
+      "$ref": "#/components/schemas/Usage"
+     },
+     "request_id": {
+      "type": "string"
+     }
+    }
+   },
+   "TtsResponse": {
+    "type": "object",
+    "required": [
+     "bci",
+     "audio_s",
+     "timings_ms",
+     "usage"
+    ],
+    "properties": {
+     "bci": {
+      "type": "string"
+     },
+     "audio_url": {
+      "type": "string",
+      "description": "relative: fetch BASE + audio_url"
+     },
+     "audio_b64": {
+      "type": "string"
+     },
+     "audio_s": {
+      "type": "number"
+     },
+     "sample_rate": {
+      "type": "integer"
+     },
+     "timings_ms": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "integer"
+      }
+     },
+     "model": {
+      "type": "string"
+     },
+     "usage": {
+      "$ref": "#/components/schemas/Usage"
+     },
+     "request_id": {
+      "type": "string"
+     }
+    }
+   },
+   "SpeakResponse": {
+    "type": "object",
+    "required": [
+     "eng",
+     "fra",
+     "bci",
+     "audio_url",
+     "timings_ms",
+     "route",
+     "usage"
+    ],
+    "properties": {
+     "eng": {
+      "type": "string"
+     },
+     "fra": {
+      "type": "string"
+     },
+     "bci": {
+      "type": "string"
+     },
+     "audio_url": {
+      "type": "string"
+     },
+     "audio_s": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "timings_ms": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "integer"
+      }
+     },
+     "route": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "usage": {
+      "$ref": "#/components/schemas/Usage"
+     },
+     "request_id": {
+      "type": "string"
+     }
+    }
+   },
+   "Language": {
+    "type": "object",
+    "required": [
+     "code",
+     "name",
+     "asr",
+     "tts",
+     "mt",
+     "styles"
+    ],
+    "properties": {
+     "code": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "asr": {
+      "type": "boolean"
+     },
+     "tts": {
+      "type": "boolean"
+     },
+     "mt": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "styles": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    }
+   },
+   "LanguagesResponse": {
+    "type": "object",
+    "required": [
+     "languages"
+    ],
+    "properties": {
+     "languages": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Language"
+      }
+     }
+    }
+   },
+   "ModelCard": {
+    "type": "object",
+    "required": [
+     "id",
+     "object",
+     "created",
+     "owned_by",
+     "input_modalities",
+     "output_modalities",
+     "pricing"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "enum": [
+       "abyshire/translate-baoule",
+       "abyshire/listen-baoule",
+       "abyshire/speak-baoule",
+       "abyshire/embed-baoule"
+      ]
+     },
+     "object": {
+      "type": "string",
+      "const": "model"
+     },
+     "created": {
+      "type": "integer"
+     },
+     "owned_by": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "description": {
+      "type": "string"
+     },
+     "input_modalities": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "text",
+        "audio"
+       ]
+      }
+     },
+     "output_modalities": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "text",
+        "audio",
+        "embeddings"
+       ]
+      }
+     },
+     "context_length": {
+      "type": "integer"
+     },
+     "max_output_length": {
+      "type": "integer"
+     },
+     "limits": {
+      "type": "object",
+      "additionalProperties": true
+     },
+     "pricing": {
+      "type": "object",
+      "description": "USD per unit, as strings (OpenRouter style).",
+      "properties": {
+       "prompt": {
+        "type": "string"
+       },
+       "completion": {
+        "type": "string"
+       },
+       "audio_second": {
+        "type": "string"
+       },
+       "character": {
+        "type": "string"
+       },
+       "unit": {
+        "type": "string"
+       },
+       "placeholder": {
+        "type": "boolean"
+       }
+      }
+     },
+     "supported_parameters": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "access": {
+      "type": "string",
+      "enum": [
+       "public",
+       "approval"
+      ]
+     },
+     "available": {
+      "type": "boolean"
+     },
+     "datacenters": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "country_code": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    }
+   },
+   "ModelsResponse": {
+    "type": "object",
+    "required": [
+     "object",
+     "data"
+    ],
+    "properties": {
+     "object": {
+      "type": "string",
+      "const": "list"
+     },
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/ModelCard"
+      }
+     },
+     "api_version": {
+      "type": "string"
+     },
+     "mt": {
+      "type": "object"
+     },
+     "asr": {
+      "type": "object"
+     },
+     "tts": {
+      "type": "object"
+     },
+     "embed": {
+      "type": "object"
+     }
+    }
+   },
+   "ChatMessage": {
+    "type": "object",
+    "required": [
+     "role"
+    ],
+    "properties": {
+     "role": {
+      "type": "string",
+      "enum": [
+       "system",
+       "developer",
+       "user",
+       "assistant"
+      ]
+     },
+     "content": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "type": {
+           "type": "string"
+          },
+          "text": {
+           "type": "string"
+          }
+         }
+        }
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   },
+   "TranslationOptions": {
+    "type": "object",
+    "properties": {
+     "source": {
+      "$ref": "#/components/schemas/Lang"
+     },
+     "target": {
+      "$ref": "#/components/schemas/Lang"
+     },
+     "style": {
+      "$ref": "#/components/schemas/Style"
+     }
+    }
+   },
+   "ChatRequest": {
+    "type": "object",
+    "required": [
+     "messages"
+    ],
+    "properties": {
+     "model": {
+      "type": "string",
+      "default": "abyshire/translate-baoule"
+     },
+     "messages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+       "$ref": "#/components/schemas/ChatMessage"
+      }
+     },
+     "translation": {
+      "$ref": "#/components/schemas/TranslationOptions"
+     },
+     "stream": {
+      "type": "boolean",
+      "default": false
+     },
+     "stream_options": {
+      "type": "object",
+      "properties": {
+       "include_usage": {
+        "type": "boolean"
+       }
+      }
+     },
+     "max_tokens": {
+      "type": "integer",
+      "description": "accepted; output is capped by the model limits"
+     },
+     "max_completion_tokens": {
+      "type": "integer"
+     },
+     "temperature": {
+      "type": "number",
+      "description": "ignored (beam search)"
+     },
+     "top_p": {
+      "type": "number",
+      "description": "ignored"
+     },
+     "n": {
+      "type": "integer",
+      "enum": [
+       1
+      ]
+     },
+     "user": {
+      "type": "string"
+     }
+    }
+   },
+   "ChatUsage": {
+    "type": "object",
+    "required": [
+     "prompt_tokens",
+     "completion_tokens",
+     "total_tokens"
+    ],
+    "properties": {
+     "prompt_tokens": {
+      "type": "integer"
+     },
+     "completion_tokens": {
+      "type": "integer"
+     },
+     "total_tokens": {
+      "type": "integer"
+     }
+    }
+   },
+   "ChatCompletion": {
+    "type": "object",
+    "required": [
+     "id",
+     "object",
+     "created",
+     "model",
+     "choices",
+     "usage"
+    ],
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "object": {
+      "type": "string",
+      "const": "chat.completion"
+     },
+     "created": {
+      "type": "integer"
+     },
+     "model": {
+      "type": "string"
+     },
+     "choices": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": [
+        "index",
+        "message",
+        "finish_reason"
+       ],
+       "properties": {
+        "index": {
+         "type": "integer"
+        },
+        "message": {
+         "type": "object",
+         "required": [
+          "role",
+          "content"
+         ],
+         "properties": {
+          "role": {
+           "type": "string",
+           "const": "assistant"
+          },
+          "content": {
+           "type": "string"
+          }
+         }
+        },
+        "finish_reason": {
+         "type": "string"
+        }
+       }
+      }
+     },
+     "usage": {
+      "$ref": "#/components/schemas/ChatUsage"
+     },
+     "translation": {
+      "type": "object",
+      "properties": {
+       "source": {
+        "type": "string"
+       },
+       "target": {
+        "type": "string"
+       },
+       "style": {
+        "type": "string"
+       },
+       "pivot": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      }
+     }
+    }
+   },
+   "Transcription": {
+    "type": "object",
+    "required": [
+     "text",
+     "usage"
+    ],
+    "properties": {
+     "text": {
+      "type": "string"
+     },
+     "language": {
+      "type": "string"
+     },
+     "duration": {
+      "type": "number"
+     },
+     "confidence": {
+      "type": "number"
+     },
+     "low_confidence": {
+      "type": "boolean"
+     },
+     "model": {
+      "type": "string"
+     },
+     "usage": {
+      "type": "object",
+      "required": [
+       "type",
+       "seconds"
+      ],
+      "properties": {
+       "type": {
+        "type": "string",
+        "const": "duration"
+       },
+       "seconds": {
+        "type": "number"
+       }
+      }
+     }
+    }
+   },
+   "SpeechRequest": {
+    "type": "object",
+    "required": [
+     "input"
+    ],
+    "properties": {
+     "model": {
+      "type": "string",
+      "default": "abyshire/speak-baoule"
+     },
+     "input": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+     },
+     "voice": {
+      "type": "string",
+      "default": "default"
+     },
+     "response_format": {
+      "type": "string",
+      "enum": [
+       "wav",
+       "pcm",
+       "mp3",
+       "opus",
+       "flac"
+      ],
+      "default": "wav"
+     },
+     "speed": {
+      "type": "number",
+      "description": "accepted and ignored"
+     }
+    }
+   },
+   "EmbeddingsRequest": {
+    "type": "object",
+    "required": [
+     "input"
+    ],
+    "properties": {
+     "model": {
+      "type": "string",
+      "default": "abyshire/embed-baoule"
+     },
+     "input": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 128,
+        "items": {
+         "type": "string",
+         "maxLength": 8000
+        }
+       }
+      ]
+     },
+     "encoding_format": {
+      "type": "string",
+      "enum": [
+       "float",
+       "base64"
+      ],
+      "default": "float"
+     },
+     "input_type": {
+      "type": "string",
+      "enum": [
+       "document",
+       "query"
+      ],
+      "default": "document"
+     },
+     "dimensions": {
+      "type": "integer",
+      "enum": [
+       768
+      ]
+     },
+     "user": {
+      "type": "string"
+     }
+    }
+   },
+   "EmbeddingsResponse": {
+    "type": "object",
+    "required": [
+     "object",
+     "data",
+     "model",
+     "usage"
+    ],
+    "properties": {
+     "object": {
+      "type": "string",
+      "const": "list"
+     },
+     "data": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": [
+        "object",
+        "index",
+        "embedding"
+       ],
+       "properties": {
+        "object": {
+         "type": "string",
+         "const": "embedding"
+        },
+        "index": {
+         "type": "integer"
+        },
+        "embedding": {
+         "anyOf": [
+          {
+           "type": "array",
+           "items": {
+            "type": "number"
+           }
+          },
+          {
+           "type": "string",
+           "description": "base64 of little-endian float32"
+          }
+         ]
+        }
+       }
+      }
+     },
+     "model": {
+      "type": "string"
+     },
+     "usage": {
+      "type": "object",
+      "required": [
+       "prompt_tokens",
+       "total_tokens"
+      ],
+      "properties": {
+       "prompt_tokens": {
+        "type": "integer"
+       },
+       "total_tokens": {
+        "type": "integer"
+       }
+      }
+     }
+    }
+   },
+   "Problem": {
+    "type": "object",
+    "required": [
+     "type",
+     "title",
+     "status",
+     "detail",
+     "code"
+    ],
+    "properties": {
+     "type": {
+      "type": "string"
+     },
+     "title": {
+      "type": "string"
+     },
+     "status": {
+      "type": "integer"
+     },
+     "detail": {
+      "type": "string"
+     },
+     "code": {
+      "type": "string"
+     }
+    }
+   },
+   "OpenAIError": {
+    "type": "object",
+    "required": [
+     "error"
+    ],
+    "properties": {
+     "error": {
+      "type": "object",
+      "required": [
+       "message",
+       "type",
+       "code"
+      ],
+      "properties": {
+       "message": {
+        "type": "string"
+       },
+       "type": {
+        "type": "string"
+       },
+       "code": {
+        "type": "string"
+       },
+       "param": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      }
+     },
+     "type": {
+      "type": "string"
+     },
+     "title": {
+      "type": "string"
+     },
+     "status": {
+      "type": "integer"
+     },
+     "detail": {
+      "type": "string"
+     },
+     "code": {
+      "type": "string"
+     }
+    }
+   },
+   "Health": {
+    "type": "object",
+    "required": [
+     "ok"
+    ],
+    "properties": {
+     "ok": {
+      "type": "boolean"
+     },
+     "service": {
+      "type": "string"
+     },
+     "version": {
+      "type": "string"
+     },
+     "device": {
+      "type": "string"
+     },
+     "services": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string",
+       "enum": [
+        "ready",
+        "loading",
+        "off",
+        "error"
+       ]
+      }
+     }
+    }
+   }
+  }
+ }
+}

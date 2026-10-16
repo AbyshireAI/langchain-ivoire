@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_FROZEN: "1"          # use the committed uv.lock as is
+  PYTHONUTF8: "1"         # Baoulé text in tests on Windows
+  FORCE_COLOR: "1"
+
+jobs:
+  lint:
+    name: Lint and type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - run: uv sync --group lint --group test
+      - name: ruff
+        run: |
+          uv run ruff check . libs/langchain-ivoire
+          uv run ruff format --check . libs/langchain-ivoire
+      - name: mypy --strict
+        run: |
+          cd libs/langchain-ivoire && uv run mypy langchain_ivoire tests && cd ../..
+          uv run mypy benchmarks
+      - name: uv.lock is up to date
+        run: uv lock --check
+
+  test:
+    name: Tests (py${{ matrix.python }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - run: uv sync --group test
+      - name: langchain-ivoire unit tests (network blocked by pytest-socket)
+        working-directory: libs/langchain-ivoire
+        run: uv run pytest tests/unit_tests -q
+      - name: benchmark scoring code
+        run: uv run pytest benchmarks -q
+      - name: no torch in the default install
+        run: uv run python -c "import importlib.util as u, sys; sys.exit(u.find_spec('torch') is not None)"
+
+  mcp:
+    name: "[mcp] extra and coverage gate"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - run: uv sync --group test --group mcp
+      - name: unit tests with coverage (fails under 85%)
+        working-directory: libs/langchain-ivoire
+        run: >-
+          uv run pytest tests/unit_tests -q
+          --cov=langchain_ivoire --cov-report=term-missing --cov-report=xml
+          --cov-fail-under=85
+      - name: ivoire-mcp starts
+        run: uv run ivoire-mcp --version
+
+  min-versions:
+    name: Lowest direct dependency versions (py3.10)
+    runs-on: ubuntu-latest
+    env:
+      UV_FROZEN: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          python-version: "3.10"
+      - name: resolve the lowest allowed versions (without touching uv.lock)
+        run: |
+          uv venv
+          uv pip install --resolution lowest-direct -e libs/langchain-ivoire[mcp] \
+            "pytest>=8" "pytest-asyncio>=0.24" "pytest-socket>=0.7" "respx>=0.22" "langchain-tests>=1.1,<2" \
+            "jsonschema>=4.18"
+          uv pip list | grep -Ei "^(langchain|langgraph|httpx|mcp) "
+      - name: unit tests
+        working-directory: libs/langchain-ivoire
+        run: ../../.venv/bin/python -m pytest tests/unit_tests -q -p no:cacheprovider

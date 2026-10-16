@@ -1,0 +1,60 @@
+site_name: langchain-ivoire
+site_description: LangChain integration for Ivorian languages (Baoulé first)
+repo_url: https://github.com/AbyshireAI/langchain-ivoire
+repo_name: AbyshireAI/langchain-ivoire
+edit_uri: edit/main/docs/
+copyright: Code MIT © Abyshire Technology Ltd. The models are served through the Abyshire API under its own terms.
+
+theme:
+  name: material
+  language: en
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle: {icon: material/weather-night, name: Dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle: {icon: material/weather-sunny, name: Light mode}
+
+nav:
+  - Quickstart: index.md
+  - Middleware: middleware.md
+  - Voice agent: voice-agent.md
+  - MCP: mcp.md
+  - Benchmarks: benchmarks.md
+  - Limitations: limitations.md
+  - API reference: api.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [libs/langchain-ivoire]
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: true
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc: {permalink: true}
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+
+validation:
+  nav:
+    omitted_files: info
+  links:
+    not_found: warn
+    anchors: warn

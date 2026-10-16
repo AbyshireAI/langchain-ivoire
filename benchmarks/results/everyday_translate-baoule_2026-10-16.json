@@ -1,0 +1,92 @@
+{
+  "task": "mt",
+  "style": "everyday",
+  "results": [
+    {
+      "direction": "bci-fra",
+      "n": 716,
+      "metric": "chrF++",
+      "latency": {
+        "requests": 716,
+        "p50_ms": 237,
+        "p90_ms": 442,
+        "mean_ms": 281,
+        "max_ms": 1606,
+        "items_per_request": 1
+      },
+      "raw": {
+        "score": 36.53,
+        "ci95": [
+          35.02,
+          37.93
+        ]
+      },
+      "norm": {
+        "score": 36.56,
+        "ci95": [
+          35.05,
+          37.98
+        ]
+      }
+    },
+    {
+      "direction": "fra-bci",
+      "n": 716,
+      "metric": "chrF++",
+      "latency": {
+        "requests": 716,
+        "p50_ms": 228,
+        "p90_ms": 433,
+        "mean_ms": 266,
+        "max_ms": 1618,
+        "items_per_request": 1
+      },
+      "raw": {
+        "score": 37.05,
+        "ci95": [
+          35.73,
+          38.41
+        ]
+      },
+      "norm": {
+        "score": 37.11,
+        "ci95": [
+          35.79,
+          38.46
+        ]
+      }
+    }
+  ],
+  "test_set": "everyday",
+  "description": "held-out everyday sentences",
+  "note": "Measured through the hosted API (https://api.abyshire.ci) with benchmarks/run_benchmark.py, one item per request. Latency is wall-clock per request on the client, network included.",
+  "backend": "remote",
+  "server_models": {
+    "api_version": "2.0.0",
+    "asr": {
+      "name": "abyshire/listen-baoule",
+      "version": "2026-10-14"
+    },
+    "mt": {
+      "name": "abyshire/translate-baoule",
+      "version": "2026-10-15"
+    },
+    "tts": {
+      "name": "abyshire/speak-baoule",
+      "version": "2026-10-15"
+    }
+  },
+  "client": "langchain-ivoire 0.1.0a3 (development tree before the version bump)",
+  "python": "3.11.16",
+  "date": "2026-10-16T03:10:50Z",
+  "bootstrap": {
+    "n": 1000,
+    "seed": 12345,
+    "ci": "percentile 95%"
+  },
+  "normalisation": {
+    "raw": "none (sacrebleu-equivalent corpus chrF++)",
+    "norm": "NFC, unified apostrophes/quotes; Baoulé: tone marks dropped, ɲ->ny",
+    "asr": "lower-case, NFC, punctuation removed, apostrophes unified, ɡ (U+0261) -> g; CER without spaces (cer_with_spaces: spaces counted)"
+  }
+}

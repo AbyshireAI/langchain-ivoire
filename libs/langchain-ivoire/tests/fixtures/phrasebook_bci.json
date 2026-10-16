@@ -1,0 +1,302 @@
+{
+ "meta": {
+  "note": "Subset of the Baoule demo phrasebook (automatic checks only, not reviewed by a native speaker); personal entries removed.",
+  "n": 42
+ },
+ "phrases": [
+  {
+   "id": "01_good_morning",
+   "category": "Greetings",
+   "eng": "Good morning.",
+   "fra": "Je vous salue.",
+   "bci": "M ma yo amun like."
+  },
+  {
+   "id": "02_good_evening",
+   "category": "Greetings",
+   "eng": "Good evening.",
+   "fra": "Je vous souhaite une bonne soirée.",
+   "bci": "Nnɔsua kpalɛ."
+  },
+  {
+   "id": "03_hello_how_are_you",
+   "category": "Greetings",
+   "eng": "Hello, how are you?",
+   "fra": "Bonjour, comment allez-vous ?",
+   "bci": "N tɛ, an ti sɛn?"
+  },
+  {
+   "id": "04_i_am_fine_thank_you",
+   "category": "Greetings",
+   "eng": "I am fine, thank you.",
+   "fra": "Je vais bien, merci.",
+   "bci": "N liɛ yo'a kpa, n yo."
+  },
+  {
+   "id": "05_welcome",
+   "category": "Greetings",
+   "eng": "Welcome!",
+   "fra": "Bienvenue à la maison !",
+   "bci": "Yɛlɛ wɔ ase!"
+  },
+  {
+   "id": "06_how_is_the_family",
+   "category": "Greetings",
+   "eng": "How is the family?",
+   "fra": "Comment va la famille ?",
+   "bci": "Famiɛn'n i wun jɔ i yie?"
+  },
+  {
+   "id": "07_did_you_sleep_well",
+   "category": "Greetings",
+   "eng": "Did you sleep well?",
+   "fra": "Vous avez bien dormi ?",
+   "bci": "A lafi klanman?"
+  },
+  {
+   "id": "08_thank_you",
+   "category": "Courtesy",
+   "eng": "Thank you.",
+   "fra": "Je vous remercie.",
+   "bci": "Yɛ ɛ lɛ'n wie."
+  },
+  {
+   "id": "09_thank_you_very_much",
+   "category": "Courtesy",
+   "eng": "Thank you very much.",
+   "fra": "Je vous en remercie.",
+   "bci": "Yɛ ɛ liɛ'n wie."
+  },
+  {
+   "id": "10_please",
+   "category": "Courtesy",
+   "eng": "Please.",
+   "fra": "Je vous en prie.",
+   "bci": "ɛɛnhɛn, yo."
+  },
+  {
+   "id": "11_sorry",
+   "category": "Courtesy",
+   "eng": "Sorry.",
+   "fra": "- Je suis désolée.",
+   "bci": "Yɔ, yaci."
+  },
+  {
+   "id": "12_yes",
+   "category": "Courtesy",
+   "eng": "Yes.",
+   "fra": "C'est vrai.",
+   "bci": "Cɛcɛ."
+  },
+  {
+   "id": "13_no",
+   "category": "Courtesy",
+   "eng": "No.",
+   "fra": "Je ne veux pas.",
+   "bci": "M'an ti'ɛ."
+  },
+  {
+   "id": "14_i_don_t_understand",
+   "category": "Courtesy",
+   "eng": "I don't understand.",
+   "fra": "- Je ne comprends pas. - Pourquoi ?",
+   "bci": "M'an wunmɛn."
+  },
+  {
+   "id": "15_please_speak_slowly",
+   "category": "Courtesy",
+   "eng": "Please speak slowly.",
+   "fra": "S'il vous plaît, parlez lentement.",
+   "bci": "ɛ wan: Yaci, ndɛndɛ."
+  },
+  {
+   "id": "16_can_you_repeat_please",
+   "category": "Courtesy",
+   "eng": "Can you repeat, please?",
+   "fra": "Pouvez-vous répéter ?",
+   "bci": "ɛ wan: Yo!"
+  },
+  {
+   "id": "18_what_is_your_name",
+   "category": "About me",
+   "eng": "What is your name?",
+   "fra": "Comment tu t'appelles ?",
+   "bci": "Kɛ be flɛ wɔ ɛ?"
+  },
+  {
+   "id": "19_i_am_learning_baoul",
+   "category": "About me",
+   "eng": "I am learning Baoulé.",
+   "fra": "J'apprends le Baoulé.",
+   "bci": "N suan bue'n."
+  },
+  {
+   "id": "20_i_speak_a_little_baoul",
+   "category": "About me",
+   "eng": "I speak a little Baoulé.",
+   "fra": "Je parle un peu Baoulé.",
+   "bci": "ɛ wɛn: Yoo! N ti buebue."
+  },
+  {
+   "id": "21_i_am_happy_to_meet_you",
+   "category": "About me",
+   "eng": "I am happy to meet you.",
+   "fra": "Je suis heureux de vous rencontrer.",
+   "bci": "M'an kpa, m'an wun wɔ."
+  },
+  {
+   "id": "22_i_come_from_england",
+   "category": "About me",
+   "eng": "I come from England.",
+   "fra": "Je viens d'Angleterre.",
+   "bci": "N fin Anglo."
+  },
+  {
+   "id": "28_how_many_children_do_you_have",
+   "category": "Family",
+   "eng": "How many children do you have?",
+   "fra": "Combien avez-vous d'enfants ?",
+   "bci": "An lɛ ba nnyɛ?"
+  },
+  {
+   "id": "29_where_is_your_mother",
+   "category": "Family",
+   "eng": "Where is your mother?",
+   "fra": "Où est ta mère ?",
+   "bci": "A nin liɛ ɔ?"
+  },
+  {
+   "id": "30_greet_your_father_for_me",
+   "category": "Family",
+   "eng": "Greet your father for me.",
+   "fra": "Salue ton père de ma part.",
+   "bci": "Yo ɔ́ si like."
+  },
+  {
+   "id": "31_we_are_one_family",
+   "category": "Family",
+   "eng": "We are one family.",
+   "fra": "Nous sommes une seule famille.",
+   "bci": "Y'a kaci osufuɛ."
+  },
+  {
+   "id": "32_come_and_eat",
+   "category": "Food & home",
+   "eng": "Come and eat.",
+   "fra": "Venez manger.",
+   "bci": "Bla di like."
+  },
+  {
+   "id": "33_come_and_eat_everyone",
+   "category": "Food & home",
+   "eng": "Come and eat, everyone!",
+   "fra": "Venez manger tout le monde !",
+   "bci": "An bla, an bla be wa di like!"
+  },
+  {
+   "id": "34_the_food_is_very_good",
+   "category": "Food & home",
+   "eng": "The food is very good.",
+   "fra": "La nourriture est très bonne.",
+   "bci": "Aliɛ'n ti kpa."
+  },
+  {
+   "id": "35_i_am_hungry",
+   "category": "Food & home",
+   "eng": "I am hungry.",
+   "fra": "Je meurs de faim.",
+   "bci": "Awe kuun min."
+  },
+  {
+   "id": "36_i_am_thirsty",
+   "category": "Food & home",
+   "eng": "I am thirsty.",
+   "fra": "Je suis assoiffé.",
+   "bci": "Nian, nzue we dɛ."
+  },
+  {
+   "id": "37_give_me_water_please",
+   "category": "Food & home",
+   "eng": "Give me water, please.",
+   "fra": "Donnez-moi de l'eau, s'il vous plaît.",
+   "bci": "Amun man min nzue, n srɛ amun."
+  },
+  {
+   "id": "38_pass_me_the_wine",
+   "category": "Food & home",
+   "eng": "Pass me the wine.",
+   "fra": "Passe-moi le vin.",
+   "bci": "Man min nzan'n."
+  },
+  {
+   "id": "39_pass_me_the_wine_please",
+   "category": "Food & home",
+   "eng": "Pass me the wine, please.",
+   "fra": "Passez-moi le vin, s'il vous plaît.",
+   "bci": "Yaci, man min nzan'n."
+  },
+  {
+   "id": "40_i_am_full",
+   "category": "Food & home",
+   "eng": "I am full.",
+   "fra": "Je suis rassasiée.",
+   "bci": "M'an ku yi."
+  },
+  {
+   "id": "41_sit_down",
+   "category": "Food & home",
+   "eng": "Sit down.",
+   "fra": "Asseyez-vous. Je vous en prie.",
+   "bci": "ɛ tran ase."
+  },
+  {
+   "id": "42_go_to_sleep",
+   "category": "Food & home",
+   "eng": "Go to sleep.",
+   "fra": "Va te coucher tout de suite.",
+   "bci": "Kɔ ko la."
+  },
+  {
+   "id": "43_good_night",
+   "category": "Goodbye",
+   "eng": "Good night.",
+   "fra": "Je vous souhaite une bonne nuit.",
+   "bci": "Nnɔsua fɛ."
+  },
+  {
+   "id": "44_goodbye",
+   "category": "Goodbye",
+   "eng": "Goodbye.",
+   "fra": "Au revoir !",
+   "bci": "Ee!"
+  },
+  {
+   "id": "45_see_you_tomorrow",
+   "category": "Goodbye",
+   "eng": "See you tomorrow.",
+   "fra": "On se voit demain.",
+   "bci": "N wun wɔ ainman!"
+  },
+  {
+   "id": "46_have_a_safe_journey",
+   "category": "Goodbye",
+   "eng": "Have a safe journey.",
+   "fra": "Je vous souhaite bon voyage.",
+   "bci": "Amun wun jɔ amun fɔuun."
+  },
+  {
+   "id": "47_may_god_bless_you",
+   "category": "Goodbye",
+   "eng": "May God bless you.",
+   "fra": "Que Dieu vous bénisse.",
+   "bci": "Man Nyanmiɛn yo amun ye."
+  },
+  {
+   "id": "48_we_will_come_back",
+   "category": "Goodbye",
+   "eng": "We will come back.",
+   "fra": "Nous reviendrons.",
+   "bci": "E ba ɔ."
+  }
+ ]
+}

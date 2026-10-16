@@ -1,0 +1,12 @@
+{"id": "01_good_morning", "bci": "M ma yo amun like.", "fra": "Je vous salue.", "eng": "Good morning.", "source": "phrasebook_fixture"}
+{"id": "02_good_evening", "bci": "Nnɔsua kpalɛ.", "fra": "Je vous souhaite une bonne soirée.", "eng": "Good evening.", "source": "phrasebook_fixture"}
+{"id": "03_hello_how_are_you", "bci": "N tɛ, an ti sɛn?", "fra": "Bonjour, comment allez-vous ?", "eng": "Hello, how are you?", "source": "phrasebook_fixture"}
+{"id": "04_i_am_fine_thank_you", "bci": "N liɛ yo'a kpa, n yo.", "fra": "Je vais bien, merci.", "eng": "I am fine, thank you.", "source": "phrasebook_fixture"}
+{"id": "05_welcome", "bci": "Yɛlɛ wɔ ase!", "fra": "Bienvenue à la maison !", "eng": "Welcome!", "source": "phrasebook_fixture"}
+{"id": "06_how_is_the_family", "bci": "Famiɛn'n i wun jɔ i yie?", "fra": "Comment va la famille ?", "eng": "How is the family?", "source": "phrasebook_fixture"}
+{"id": "07_did_you_sleep_well", "bci": "A lafi klanman?", "fra": "Vous avez bien dormi ?", "eng": "Did you sleep well?", "source": "phrasebook_fixture"}
+{"id": "08_thank_you", "bci": "Yɛ ɛ lɛ'n wie.", "fra": "Je vous remercie.", "eng": "Thank you.", "source": "phrasebook_fixture"}
+{"id": "09_thank_you_very_much", "bci": "Yɛ ɛ liɛ'n wie.", "fra": "Je vous en remercie.", "eng": "Thank you very much.", "source": "phrasebook_fixture"}
+{"id": "10_please", "bci": "ɛɛnhɛn, yo.", "fra": "Je vous en prie.", "eng": "Please.", "source": "phrasebook_fixture"}
+{"id": "11_sorry", "bci": "Yɔ, yaci.", "fra": "- Je suis désolée.", "eng": "Sorry.", "source": "phrasebook_fixture"}
+{"id": "12_yes", "bci": "Cɛcɛ.", "fra": "C'est vrai.", "eng": "Yes.", "source": "phrasebook_fixture"}

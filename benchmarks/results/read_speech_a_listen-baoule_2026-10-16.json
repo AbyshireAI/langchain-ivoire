@@ -1,0 +1,67 @@
+{
+  "task": "asr",
+  "results": [
+    {
+      "latency": {
+        "p50_ms": 645,
+        "p90_ms": 825,
+        "mean_ms": 672,
+        "max_ms": 1757,
+        "items_per_request": 1
+      },
+      "cer": {
+        "score": 7.71,
+        "ci95": [
+          6.76,
+          8.86
+        ]
+      },
+      "wer": {
+        "score": 16.38,
+        "ci95": [
+          15.0,
+          17.96
+        ]
+      },
+      "cer_with_spaces": {
+        "score": 7.03,
+        "ci95": [
+          6.12,
+          8.11
+        ]
+      }
+    }
+  ],
+  "test_set": "read_speech_a",
+  "description": "read speech, held-out sentences",
+  "note": "Measured through the hosted API (https://api.abyshire.ci) with benchmarks/run_benchmark.py, one item per request. Latency is wall-clock per request on the client, network included.",
+  "backend": "remote",
+  "server_models": {
+    "api_version": "2.0.0",
+    "asr": {
+      "name": "abyshire/listen-baoule",
+      "version": "2026-10-14"
+    },
+    "mt": {
+      "name": "abyshire/translate-baoule",
+      "version": "2026-10-15"
+    },
+    "tts": {
+      "name": "abyshire/speak-baoule",
+      "version": "2026-10-15"
+    }
+  },
+  "client": "langchain-ivoire 0.1.0a3 (development tree before the version bump)",
+  "python": "3.11.16",
+  "date": "2026-10-16T03:04:11Z",
+  "bootstrap": {
+    "n": 1000,
+    "seed": 12345,
+    "ci": "percentile 95%"
+  },
+  "normalisation": {
+    "raw": "none (sacrebleu-equivalent corpus chrF++)",
+    "norm": "NFC, unified apostrophes/quotes; Baoulé: tone marks dropped, ɲ->ny",
+    "asr": "lower-case, NFC, punctuation removed, apostrophes unified, ɡ (U+0261) -> g; CER without spaces (cer_with_spaces: with spaces, the offline evaluation's CER)"
+  }
+}

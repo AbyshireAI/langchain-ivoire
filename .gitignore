@@ -1,0 +1,27 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+# build artefacts are never committed (wheels/sdists are built in CI)
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+site/
+.ipynb_checkpoints/
+*.wav
+!libs/langchain-ivoire/tests/fixtures/*.wav
+.env
+.env.*
+# private model settings (real model ids, language tokens, style tags): never commit or ship
+*.private.json
+ivoire-settings.json
+settings.private*.json
+# internal notes: never commit
+RELEASE_CLEAN_REPO.md
